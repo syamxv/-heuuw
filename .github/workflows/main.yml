@@ -31,7 +31,19 @@ jobs:
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
-        
+     - name: Restart Workflow Automatically
+      if: always() # Ensure it always runs, even if previous steps fail
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $headers = @{
+          Authorization = "Bearer $env:GITHUB_TOKEN"
+          Accept = "application/vnd.github.v3+json"
+        }
+        $body = @{
+          ref = "main"
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method POST -Body $body -Headers $headers
     # Prevent workflow to stop
     - name: Keep the GitHub Action Runner Alive
       run: |
