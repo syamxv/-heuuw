@@ -1,0 +1,69 @@
+name: Playit RDP Tunnel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-rdp-tunnel:
+    runs-on: windows-latest
+
+    steps:
+    # Langkah pertama: Checkout repository (wajib dilakukan)
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    # Langkah kedua: Download dan install Playit ke folder Downloads
+    - name: Download and Install Playit
+      run: |
+        $downloadsFolder = "$env:USERPROFILE\Downloads"
+        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$downloadsFolder\playit.exe"
+        Start-Sleep -Seconds 5  # Memberi waktu untuk menyelesaikan unduhan
+
+    # Langkah ketiga: Mengaktifkan Remote Desktop
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+
+    # Langkah keempat: Menjalankan Playit
+    - name: Start Playit and Set Up RDP Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
+      run: |
+        $downloadsFolder = "$env:USERPROFILE\Downloads"
+        Start-Process -FilePath "$downloadsFolder\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$downloadsFolder\playit.exe" -NoNewWindow
+
+    # Langkah kelima: Mengunggah semua file di folder Downloads sebagai artifacts
+    - name: Upload Files from Downloads
+      uses: actions/upload-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads\*  # Menyimpan semua file di folder Downloads
+
+    # Langkah keenam: Menjaga session tetap hidup selama 6 jam
+    - name: Keep the GitHub Action Runner Alive
+      run: |
+        Start-Sleep -Seconds 21600  # 6 jam = 21600 detik
+
+  restore-files:
+    needs: setup-rdp-tunnel
+    runs-on: windows-latest
+
+    steps:
+    # Langkah pertama: Checkout repository
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    # Langkah kedua: Mengunduh artifacts dari sesi sebelumnya
+    - name: Download Files from Previous Session
+      uses: actions/download-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads  # Mengembalikan file ke folder Downloads
+
+    # Langkah ketiga: Memverifikasi file yang dipulihkan
+    - name: Verify Restored Files
+      run: dir $env:USERPROFILE\Downloads
