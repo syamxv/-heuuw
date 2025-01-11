@@ -8,18 +8,25 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # Langkah pertama: Checkout repository (wajib dilakukan)
+    # Langkah 1: Debugging Lingkungan (opsional, membantu memeriksa lingkungan runner)
+    - name: Debug Environment
+      run: |
+        echo "Runner OS: ${{ runner.os }}"
+        echo "User Profile: $env:USERPROFILE"
+        echo "Downloads Directory: $env:USERPROFILE\Downloads"
+
+    # Langkah 2: Checkout repository
     - name: Check out the repository
       uses: actions/checkout@v2
 
-    # Langkah kedua: Download dan install Playit ke folder Downloads
+    # Langkah 3: Download dan install Playit ke folder Downloads
     - name: Download and Install Playit
       run: |
         $downloadsFolder = "$env:USERPROFILE\Downloads"
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$downloadsFolder\playit.exe"
-        Start-Sleep -Seconds 5  # Memberi waktu untuk menyelesaikan unduhan
+        Start-Sleep -Seconds 5
 
-    # Langkah ketiga: Mengaktifkan Remote Desktop
+    # Langkah 4: Mengaktifkan Remote Desktop
     - name: Enable Remote Desktop
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
@@ -27,7 +34,7 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
         Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
-    # Langkah keempat: Menjalankan Playit
+    # Langkah 5: Menjalankan Playit dan membuat RDP Tunnel
     - name: Start Playit and Set Up RDP Tunnel
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }}
@@ -36,14 +43,14 @@ jobs:
         Start-Process -FilePath "$downloadsFolder\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$downloadsFolder\playit.exe" -NoNewWindow
 
-    # Langkah kelima: Mengunggah semua file di folder Downloads sebagai artifacts
+    # Langkah 6: Upload semua file dari folder Downloads
     - name: Upload Files from Downloads
       uses: actions/upload-artifact@v3
       with:
         name: downloaded-files
-        path: $env:USERPROFILE\Downloads\*  # Menyimpan semua file di folder Downloads
+        path: $env:USERPROFILE\Downloads\*
 
-    # Langkah keenam: Menjaga session tetap hidup selama 6 jam
+    # Langkah 7: Menjaga session tetap hidup selama 6 jam
     - name: Keep the GitHub Action Runner Alive
       run: |
         Start-Sleep -Seconds 21600  # 6 jam = 21600 detik
@@ -53,17 +60,18 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # Langkah pertama: Checkout repository
+    # Langkah 1: Checkout repository
     - name: Check out the repository
       uses: actions/checkout@v2
 
-    # Langkah kedua: Mengunduh artifacts dari sesi sebelumnya
+    # Langkah 2: Unduh file dari sesi sebelumnya
     - name: Download Files from Previous Session
       uses: actions/download-artifact@v3
       with:
         name: downloaded-files
-        path: $env:USERPROFILE\Downloads  # Mengembalikan file ke folder Downloads
+        path: $env:USERPROFILE\Downloads
 
-    # Langkah ketiga: Memverifikasi file yang dipulihkan
+    # Langkah 3: Verifikasi file yang dipulihkan
     - name: Verify Restored Files
-      run: dir $env:USERPROFILE\Downloads
+      run: |
+        dir $env:USERPROFILE\Downloads
