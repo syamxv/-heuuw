@@ -8,40 +8,28 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    # Langkah 1: Debugging Lingkungan (opsional, membantu memeriksa lingkungan runner)
-    - name: Debug Environment
-      run: |
-        echo "Runner OS: ${{ runner.os }}"
-        echo "User Profile: $env:USERPROFILE"
-        echo "Downloads Directory: $env:USERPROFILE\Downloads"
-
-    # Langkah 2: Checkout repository
     - name: Check out the repository
       uses: actions/checkout@v2
 
-    # Langkah 3: Download dan install Playit ke folder Downloads
     - name: Download and Install Playit
       run: |
-        $downloadsFolder = "$env:USERPROFILE\Downloads"
-        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$downloadsFolder\playit.exe"
-        Start-Sleep -Seconds 5
+        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
+        Start-Sleep -Seconds 5  # Give some time for the download to complete
 
-    # Langkah 4: Mengaktifkan Remote Desktop
-    - name: Enable Remote Desktop
-      run: |
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+        
+    # Default, optional.
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
-    # Langkah 5: Menjalankan Playit dan membuat RDP Tunnel
     - name: Start Playit and Set Up RDP Tunnel
       env:
-        PLAYIT_AUTH_KEY: ${{ secrets.PL }}
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
-        $downloadsFolder = "$env:USERPROFILE\Downloads"
-        Start-Process -FilePath "$downloadsFolder\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
-        Start-Process -FilePath "$downloadsFolder\playit.exe" -NoNewWindow
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
     # Langkah 6: Upload semua file dari folder Downloads
     - name: Upload Files from Downloads
