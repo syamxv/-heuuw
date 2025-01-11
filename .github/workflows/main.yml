@@ -44,10 +44,10 @@ jobs:
     - name: Restart Workflow Automatically
       if: always() # Ensure it always runs, even if previous steps fail
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       run: |
         $headers = @{
-          Authorization = "Bearer $env:GITHUB_TOKEN"
+          Authorization = "Bearer $env:PERSONAL_ACCESS_TOKEN"
           Accept = "application/vnd.github.v3+json"
         }
         $body = @{
