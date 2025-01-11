@@ -1,0 +1,76 @@
+name: Playit RDP Tunnel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-rdp-tunnel:
+    runs-on: windows-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Download and Install Playit
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
+        Start-Sleep -Seconds 5  # Give some time for the download to complete
+
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+
+    - name: Enable Remote Desktop Firewall Rule
+      run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+
+    - name: Enable User Authentication for RDP
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+    - name: Set Local User Password
+      run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
+
+    - name: Start Playit and Set Up RDP Tunnel
+      env:
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
+      run: |
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
+        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+
+    - name: Upload Files from Downloads
+      uses: actions/upload-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads\*
+
+    - name: Restart Workflow Automatically
+      if: always() # Ensure it always runs, even if previous steps fail
+      env:
+        PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      run: |
+        $headers = @{
+          Authorization = "Bearer $env:PERSONAL_ACCESS_TOKEN"
+          Accept = "application/vnd.github.v3+json"
+        }
+        $body = @{
+          ref = "${{ github.ref }}" # Reference to the branch or tag triggering the workflow
+        } | ConvertTo-Json -Depth 10
+        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method POST -Body $body -Headers $headers
+
+    - name: Keep the GitHub Action Runner Alive
+      run: Start-Sleep -Seconds 43200 # Adjust the duration based on your needs
+
+  restore-files:
+    needs: setup-rdp-tunnel
+    runs-on: windows-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Download Files from Previous Session
+      uses: actions/download-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads
+
+    - name: Verify Restored Files
+      run: dir $env:USERPROFILE\Downloads
