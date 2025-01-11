@@ -9,19 +9,17 @@ jobs:
 
     steps:
     - name: Check out the repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Download and Install Playit
       run: |
         Invoke-WebRequest -Uri "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe" -OutFile "$env:USERPROFILE\playit.exe"
-        Start-Sleep -Seconds 5  # Give some time for the download to complete
+        Start-Sleep -Seconds 5
 
-        
-    # Default, optional.
     - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
     - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
     - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "p@ssw0rd!" -Force)
 
     - name: Start Playit and Set Up RDP Tunnel
@@ -31,35 +29,30 @@ jobs:
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
-    # Langkah 6: Upload semua file dari folder Downloads
     - name: Upload Files from Downloads
       uses: actions/upload-artifact@v3
       with:
         name: downloaded-files
         path: $env:USERPROFILE\Downloads\*
 
-    # Langkah 7: Menjaga session tetap hidup selama 6 jam
     - name: Keep the GitHub Action Runner Alive
       run: |
-        Start-Sleep -Seconds 21600  # 6 jam = 21600 detik
+        Start-Sleep -Seconds 21600
 
   restore-files:
     needs: setup-rdp-tunnel
     runs-on: windows-latest
 
     steps:
-    # Langkah 1: Checkout repository
     - name: Check out the repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    # Langkah 2: Unduh file dari sesi sebelumnya
     - name: Download Files from Previous Session
       uses: actions/download-artifact@v3
       with:
         name: downloaded-files
         path: $env:USERPROFILE\Downloads
 
-    # Langkah 3: Verifikasi file yang dipulihkan
     - name: Verify Restored Files
       run: |
         dir $env:USERPROFILE\Downloads
