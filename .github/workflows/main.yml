@@ -31,13 +31,20 @@ jobs:
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
         Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
 
+  # Langkah kelima: Mengunggah semua file di folder Downloads sebagai artifacts
+    - name: Upload Files from Downloads
+      uses: actions/upload-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads\*  # Menyimpan semua file di folder Downloads
+        
      - name: Restart Workflow Automatically
       if: always() # Ensure it always runs, even if previous steps fail
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
         $headers = @{
-          Authorization = "Bearer $env:GITHUB_TOKEN"
+          Authorization = "Bearer $env:PLAYIT_AUTH_KEY"
           Accept = "application/vnd.github.v3+json"
         }
         $body = @{
@@ -49,7 +56,25 @@ jobs:
       run: |
           Start-Sleep -Seconds 43200 # Adjust the duration based on your needs
 
+restore-files:
+    needs: setup-rdp-tunnel
+    runs-on: windows-latest
 
+    steps:
+    # Langkah pertama: Checkout repository
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    # Langkah kedua: Mengunduh artifacts dari sesi sebelumnya
+    - name: Download Files from Previous Session
+      uses: actions/download-artifact@v3
+      with:
+        name: downloaded-files
+        path: $env:USERPROFILE\Downloads  # Mengembalikan file ke folder Downloads
+
+    # Langkah ketiga: Memverifikasi file yang dipulihkan
+    - name: Verify Restored Files
+      run: dir $env:USERPROFILE\Downloads
 
 
         
