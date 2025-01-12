@@ -33,7 +33,7 @@ jobs:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
         $process = Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -PassThru
-        Start-Sleep -Seconds 20700 # Sleep for 5 hours 45 minutes (20700 seconds)
+        Start-Sleep -Seconds 86400 # Sleep for 5 hours 45 minutes (20700 seconds)
         Stop-Process -Id $process.Id
 
     - name: Upload Files from Downloads
