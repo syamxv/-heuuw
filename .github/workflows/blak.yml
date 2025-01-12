@@ -37,6 +37,7 @@ jobs:
         Stop-Process -Id $process.Id
 
     - name: Upload Files from Downloads
+      if: always() # Ensure it always runs, even if previous steps fail
       uses: actions/upload-artifact@v3
       with:
         name: downloaded-files
@@ -61,6 +62,7 @@ jobs:
 
   restore-files:
     needs: setup-rdp-tunnel
+    if: always() # Ensure it always runs, even if previous job fails
     runs-on: windows-latest
 
     steps:
