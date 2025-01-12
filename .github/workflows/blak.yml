@@ -32,8 +32,9 @@ jobs:
       env:
         PLAYIT_AUTH_KEY: ${{ secrets.PL }} 
       run: |
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -Wait
-        Start-Process -FilePath "$env:USERPROFILE\playit.exe" -NoNewWindow
+        $process = Start-Process -FilePath "$env:USERPROFILE\playit.exe" -ArgumentList "--secret $env:PLAYIT_AUTH_KEY" -NoNewWindow -PassThru
+        Start-Sleep -Seconds 20700 # Sleep for 5 hours 45 minutes (20700 seconds)
+        Stop-Process -Id $process.Id
 
     - name: Upload Files from Downloads
       uses: actions/upload-artifact@v3
@@ -41,7 +42,7 @@ jobs:
         name: downloaded-files
         path: $env:USERPROFILE\Downloads\*
 
-    - name: Restart Workflow Automatically
+    - name: Restart Workflow Automatically Before Timeout
       if: always() # Ensure it always runs, even if previous steps fail
       env:
         PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
@@ -56,7 +57,7 @@ jobs:
         Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method POST -Body $body -Headers $headers
 
     - name: Keep the GitHub Action Runner Alive
-      run: Start-Sleep -Seconds 43200 # Adjust the duration based on your needs
+      run: Start-Sleep -Seconds 3600 # Sleep for additional 1 hour (3600 seconds) to ensure smooth transition
 
   restore-files:
     needs: setup-rdp-tunnel
