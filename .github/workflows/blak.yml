@@ -55,7 +55,7 @@ jobs:
         $body = @{
           ref = "${{ github.ref }}" # Reference to the branch or tag triggering the workflow
         } | ConvertTo-Json -Depth 10
-        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/${{ github.workflow }}/dispatches" -Method POST -Body $body -Headers $headers
+        Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/actions/workflows/blak.yml/dispatches" -Method POST -Body $body -Headers $headers
 
     - name: Keep the GitHub Action Runner Alive
       run: Start-Sleep -Seconds 3600 # Sleep for additional 1 hour (3600 seconds) to ensure smooth transition
